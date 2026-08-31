@@ -37,18 +37,34 @@ async def create_round(
 
     now = datetime.now(timezone.utc)
 
-    new_round = Round(
+    round = Round(
         room_id=room_id,
         number=number,
         scramble=generate_scramble(),
         started_at=now,
     )
 
-    db.add(new_round)
+    db.add(round)
 
     room.last_activity_at = now
 
     await db.commit()
-    await db.refresh(new_round)
+    await db.refresh(round)
 
-    return new_round
+    return round
+
+
+async def get_current_round(
+    db: AsyncSession,
+    room_id: str,
+):
+    result = await db.execute(
+        select(Round)
+        .where(
+            Round.room_id == room_id,
+            Round.completed_at.is_(None),
+        )
+        .order_by(Round.number.desc())
+    )
+
+    return result.scalars().first()

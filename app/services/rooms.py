@@ -1,9 +1,12 @@
-import secrets
 from datetime import datetime, timezone
+import secrets
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models.room import Room
 from app.db.models.room_member import RoomMember
+from app.services.rounds import create_round
 
 
 def generate_room_id() -> str:
@@ -17,7 +20,6 @@ async def create_room(
     color: str,
     user_id: int | None = None,
 ) -> tuple[Room, RoomMember]:
-
     now = datetime.now(timezone.utc)
 
     room = Room(
@@ -41,17 +43,21 @@ async def create_room(
     db.add(member)
 
     await db.commit()
-
     await db.refresh(room)
     await db.refresh(member)
 
+    await create_round(
+        db=db,
+        room_id=room.id,
+    )
+
     return room, member
+
 
 async def get_room(
     db: AsyncSession,
     room_id: str,
 ) -> tuple[Room, list[RoomMember]] | None:
-
     room = await db.get(Room, room_id)
 
     if room is None:
@@ -62,8 +68,8 @@ async def get_room(
     )
 
     members = list(result.scalars().all())
-
     return room, members
+
 
 async def join_room(
     db: AsyncSession,
@@ -72,7 +78,6 @@ async def join_room(
     color: str,
     user_id: int | None = None,
 ) -> RoomMember | None:
-
     room = await db.get(Room, room_id)
 
     if room is None:
@@ -89,7 +94,6 @@ async def join_room(
     )
 
     db.add(member)
-
     room.last_activity_at = datetime.now(timezone.utc)
 
     await db.commit()
@@ -103,7 +107,6 @@ async def leave_room(
     room_id: str,
     member_id: str,
 ) -> str | None:
-
     room = await db.get(Room, room_id)
 
     if room is None:
@@ -124,16 +127,18 @@ async def leave_room(
             .order_by(RoomMember.joined_at.asc())
             .limit(1)
         )
-    new_owner = result.scalar_one_or_none()
 
-    if new_owner:
-        new_owner.is_owner = True
-    else:
-        await db.delete(room)
-        await db.commit()
-        return member_id
+        new_owner = result.scalar_one_or_none()
+
+        if new_owner:
+            new_owner.is_owner = True
+        else:
+            await db.delete(room)
+            await db.commit()
+            return member_id
 
     await db.delete(member)
     room.last_activity_at = datetime.now(timezone.utc)
     await db.commit()
+
     return member_id

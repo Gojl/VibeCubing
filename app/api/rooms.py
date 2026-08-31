@@ -1,9 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.solve import CreateSolveRequest, SolveResponse
-from app.services.solve import create_solve
-from app.services.solve import get_round_solves
-
+from app.services.rounds import (
+    create_round,
+    get_current_round,
+)
+from app.services.solve import (
+    create_solve,
+    get_round_solves,
+)
+from app.websocket.manager import manager
 from app.db.database import get_db
 from app.schemas.room import (
     CreateRoomRequest,
@@ -21,8 +27,6 @@ from app.services.rooms import (
     join_room,
     leave_room,
 )
-from app.services.rounds import create_round
-
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -95,10 +99,22 @@ async def join_room_endpoint(
             detail="Room not found",
         )
 
+    await manager.broadcast(
+        room_id,
+        {
+            "type": "member_joined",
+            "member": {
+                "id": member.id,
+                "nickname": member.nickname,
+                "color": member.color,
+                "is_owner": member.is_owner,
+            },
+        },
+    )
+
     return JoinRoomResponse(
         member_id=member.id,
     )
-
 
 @router.delete(
     "/{room_id}/members/{member_id}",
@@ -115,7 +131,6 @@ async def leave_room_endpoint(
             room_id=room_id,
             member_id=member_id,
         )
-
     except ValueError as e:
         raise HTTPException(
             status_code=409,
@@ -128,10 +143,17 @@ async def leave_room_endpoint(
             detail="Room or member not found",
         )
 
+    await manager.broadcast(
+        room_id,
+        {
+            "type": "member_left",
+            "member_id": member_id,
+        },
+    )
+
     return LeaveRoomResponse(
         message="Left room successfully",
     )
-
 
 @router.post(
     "/{room_id}/rounds",
@@ -155,6 +177,27 @@ async def create_round_endpoint(
 
     return round
 
+@router.get(
+    "/{room_id}/rounds/current",
+    response_model=RoundResponse,
+)
+async def get_current_round_endpoint(
+    room_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    current_round = await get_current_round(
+        db=db,
+        room_id=room_id,
+    )
+
+    if current_round is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No active round",
+        )
+
+    return current_round
+
 @router.post(
     "/{room_id}/rounds/{round_id}/solves",
     response_model=SolveResponse,
@@ -166,7 +209,7 @@ async def create_solve_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        solve = await create_solve(
+        result = await create_solve(
             db=db,
             room_id=room_id,
             round_id=round_id,
@@ -181,11 +224,43 @@ async def create_solve_endpoint(
             detail=str(e),
         )
 
-    if solve is None:
+    if result is None:
         raise HTTPException(
             status_code=404,
             detail="Round or member not found",
         )
+
+    solve, round_completed = result
+
+    await manager.broadcast(
+        room_id,
+        {
+            "type": "solve_submitted",
+            "round_id": solve.round_id,
+            "member_id": solve.member_id,
+            "time": float(solve.time),
+            "penalty": solve.penalty,
+        },
+    )
+
+    if round_completed:
+
+        current_round = await get_current_round(
+            db=db,
+            room_id=room_id,
+        )
+
+        if current_round:
+
+            await manager.broadcast(
+                room_id,
+                {
+                    "type": "round_started",
+                    "round_id": current_round.id,
+                    "number": current_round.number,
+                    "scramble": current_round.scramble,
+                },
+            )
 
     return SolveResponse(
         id=solve.id,
@@ -195,7 +270,7 @@ async def create_solve_endpoint(
         penalty=solve.penalty,
         created_at=solve.created_at,
         updated_at=solve.updated_at,
-    )
+    )   
 
 @router.get(
     "/{room_id}/rounds/{round_id}/solves",
