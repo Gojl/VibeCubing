@@ -35,7 +35,7 @@ class Solve(Base):
     )
 
     penalty: Mapped[str] = mapped_column(
-        String(3),
+        String(4),
         nullable=False,
         default="none",
         server_default="none",

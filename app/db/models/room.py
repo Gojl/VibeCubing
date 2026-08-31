@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models.base import Base
 
@@ -31,8 +30,8 @@ class Room(Base):
     )
 
     members: Mapped[list["RoomMember"]] = relationship(
-    back_populates="room",
-    cascade="all, delete-orphan",
+        back_populates="room",
+        cascade="all, delete-orphan",
     )
 
     rounds: Mapped[list["Round"]] = relationship(

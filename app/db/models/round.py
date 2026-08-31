@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.models.base import Base
 
@@ -43,7 +42,7 @@ class Round(Base):
     )
 
     room: Mapped["Room"] = relationship(
-    back_populates="rounds",
+        back_populates="rounds",
     )
 
     solves: Mapped[list["Solve"]] = relationship(

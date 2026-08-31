@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.schemas.solve import CreateSolveRequest, SolveResponse
+from app.services.solve import create_solve
+from app.services.solve import get_round_solves
+
 from app.db.database import get_db
-from app.schemas.room import CreateRoomRequest, CreateRoomResponse
-from app.services.rooms import create_room
-from app.services.rooms import create_room, get_room
-from app.services.rooms import create_room, get_room, join_room
 from app.schemas.room import (
     CreateRoomRequest,
     CreateRoomResponse,
@@ -15,12 +14,14 @@ from app.schemas.room import (
     RoomMemberResponse,
     RoomResponse,
 )
+from app.schemas.round import RoundResponse
 from app.services.rooms import (
     create_room,
     get_room,
     join_room,
     leave_room,
 )
+from app.services.rounds import create_round
 
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -43,6 +44,7 @@ async def create_room_endpoint(
         room_id=room.id,
         member_id=member.id,
     )
+
 
 @router.get("/{room_id}", response_model=RoomResponse)
 async def get_room_endpoint(
@@ -73,6 +75,7 @@ async def get_room_endpoint(
         ],
     )
 
+
 @router.post("/{room_id}/join", response_model=JoinRoomResponse)
 async def join_room_endpoint(
     room_id: str,
@@ -95,6 +98,7 @@ async def join_room_endpoint(
     return JoinRoomResponse(
         member_id=member.id,
     )
+
 
 @router.delete(
     "/{room_id}/members/{member_id}",
@@ -127,3 +131,85 @@ async def leave_room_endpoint(
     return LeaveRoomResponse(
         message="Left room successfully",
     )
+
+
+@router.post(
+    "/{room_id}/rounds",
+    response_model=RoundResponse,
+)
+async def create_round_endpoint(
+    room_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        round = await create_round(
+            db=db,
+            room_id=room_id,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
+
+    return round
+
+@router.post(
+    "/{room_id}/rounds/{round_id}/solves",
+    response_model=SolveResponse,
+)
+async def create_solve_endpoint(
+    room_id: str,
+    round_id: int,
+    data: CreateSolveRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        solve = await create_solve(
+            db=db,
+            room_id=room_id,
+            round_id=round_id,
+            member_id=data.member_id,
+            time=data.time,
+            penalty=data.penalty,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=409,
+            detail=str(e),
+        )
+
+    if solve is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Round or member not found",
+        )
+
+    return SolveResponse(
+        id=solve.id,
+        round_id=solve.round_id,
+        member_id=solve.member_id,
+        time=solve.time,
+        penalty=solve.penalty,
+        created_at=solve.created_at,
+        updated_at=solve.updated_at,
+    )
+
+@router.get(
+    "/{room_id}/rounds/{round_id}/solves",
+    response_model=list[SolveResponse],
+)
+async def get_round_solves_endpoint(
+    room_id: str,
+    round_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    solves = await get_round_solves(
+        db=db,
+        room_id=room_id,
+        round_id=round_id,
+    )
+
+    return solves
