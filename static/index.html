@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cube Race</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app">
+
+    <header class="topbar">
+        <div>
+            <h1>Cube Race</h1>
+            <p>Speedcubing room</p>
+        </div>
+
+        <div id="roomHeader" class="room-header">
+            <span>Room</span>
+            <strong id="roomId">-</strong>
+        </div>
+    </header>
+
+    <!-- CREATE / JOIN -->
+
+    <main id="roomEntry" class="entry-page">
+
+        <section class="entry-card">
+
+            <div class="entry-section">
+                <h2>Create room</h2>
+
+                <label for="createEvent">Event</label>
+                <input
+                    id="createEvent"
+                    type="text"
+                    placeholder="3x3"
+                    value="3x3"
+                >
+
+                <label for="createNickname">Nickname</label>
+                <input
+                    id="createNickname"
+                    type="text"
+                    placeholder="Nickname"
+                >
+
+                <label for="createColor">Color</label>
+                <input
+                    id="createColor"
+                    type="color"
+                    value="#000000"
+                >
+
+                <button id="createRoom" class="primary-button">
+                    Create room
+                </button>
+            </div>
+
+            <div class="entry-divider"></div>
+
+            <div class="entry-section">
+                <h2>Join room</h2>
+
+                <label for="joinRoomId">Room ID</label>
+                <input
+                    id="joinRoomId"
+                    type="text"
+                    placeholder="Room ID"
+                >
+
+                <label for="joinNickname">Nickname</label>
+                <input
+                    id="joinNickname"
+                    type="text"
+                    placeholder="Nickname"
+                >
+
+                <label for="joinColor">Color</label>
+                <input
+                    id="joinColor"
+                    type="color"
+                    value="#000000"
+                >
+
+                <button id="joinRoom" class="primary-button">
+                    Join room
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- ROOM -->
+
+    <main id="roomView" class="room-page">
+
+        <div class="room-meta">
+            <div>
+                <span>You</span>
+                <strong id="playerNickname">-</strong>
+            </div>
+
+            <div>
+                <span>Round</span>
+                <strong id="roundNumber">-</strong>
+            </div>
+
+            <div>
+                <span>WebSocket</span>
+                <strong id="connectionStatus">Disconnected</strong>
+            </div>
+        </div>
+
+        <div class="room-grid">
+
+            <!-- LEFT -->
+
+            <section class="main-column">
+
+                <div class="panel scramble-panel">
+                    <div class="panel-title">
+                        <span>Scramble</span>
+                    </div>
+
+                    <div id="scramble" class="scramble">
+                        Waiting...
+                    </div>
+                </div>
+
+                <div class="panel timer-panel">
+
+                    <div id="timer" class="timer">
+                        0.00
+                    </div>
+
+                    <div class="timer-hint">
+                        Press SPACE to start / stop
+                    </div>
+
+                    <div class="timer-controls">
+
+                        <select id="penalty">
+                            <option value="none">No penalty</option>
+                            <option value="+2">+2</option>
+                            <option value="DNF">DNF</option>
+                        </select>
+
+                        <button id="submitSolve" class="primary-button">
+                            Submit solve
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="panel results-panel">
+
+                    <div class="panel-title">
+                        <span>Current round</span>
+                    </div>
+
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="results"></tbody>
+                    </table>
+
+                </div>
+
+                <!-- RECORDS -->
+
+                <div class="panel records-panel">
+
+                    <div class="panel-title">
+                        <span>Room records</span>
+                    </div>
+
+                    <div class="records-grid">
+
+                        <div class="record">
+                            <span>Best single</span>
+                            <strong id="bestSingle">-</strong>
+                        </div>
+
+                        <div class="record">
+                            <span>Best Ao5</span>
+                            <strong id="bestAo5">-</strong>
+                        </div>
+
+                        <div class="record">
+                            <span>Best Ao12</span>
+                            <strong id="bestAo12">-</strong>
+                        </div>
+
+                        <div class="record">
+                            <span>Best Ao25</span>
+                            <strong id="bestAo25">-</strong>
+                        </div>
+
+                        <div class="record">
+                            <span>Best Ao50</span>
+                            <strong id="bestAo50">-</strong>
+                        </div>
+
+                        <div class="record">
+                            <span>Best Ao100</span>
+                            <strong id="bestAo100">-</strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- RIGHT -->
+
+            <aside class="side-column">
+
+                <div class="panel players-panel">
+
+                    <div class="panel-title">
+                        <span>Players</span>
+                    </div>
+
+                    <div id="playerStats" class="player-stats"></div>
+
+                </div>
+
+                <div class="panel history-panel">
+
+                    <div class="panel-title">
+                        <span>History</span>
+                    </div>
+
+                    <div id="history" class="history-list"></div>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script src="/static/script.js"></script>
+
+</body>
+</html>
