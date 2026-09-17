@@ -542,7 +542,10 @@ async function submitSolve() {
             return;
         }
 
-        solveSubmitted = true;
+        if (currentRoundId === roundIdAtSubmit) {
+            solveSubmitted = true;
+        }
+
         submitSolveButton.blur();
         console.log(
             "Solve submitted successfully:",
